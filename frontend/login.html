@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Login | DRRCA Graph Manager</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body class="bg-slate-800 text-slate-100">
+    <main class="mx-auto flex min-h-screen max-w-md flex-col justify-center px-4 py-8">
+      <section class="rounded-lg border border-slate-300/70 bg-slate-100 p-6 shadow-xl shadow-slate-950/20">
+        <p class="text-sm font-semibold uppercase tracking-wide text-emerald-700">DRRCA Graph Manager</p>
+        <h1 class="mt-2 text-2xl font-bold text-slate-950">Login</h1>
+        <p class="mt-1 text-sm text-slate-600">Access the Iligan City disaster response dashboard.</p>
+
+        <form id="loginForm" class="mt-5 space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-slate-700" for="email">Email</label>
+            <input id="email" type="email" required class="mt-1 min-h-10 w-full rounded-md border border-slate-400 bg-white px-3 text-sm text-slate-950 outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700" for="password">Password</label>
+            <input id="password" type="password" required minlength="6" class="mt-1 min-h-10 w-full rounded-md border border-slate-400 bg-white px-3 text-sm text-slate-950 outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100" />
+          </div>
+          <p id="authMessage" class="hidden rounded-md bg-rose-50 px-3 py-2 text-sm text-rose-700"></p>
+          <button id="submitBtn" class="w-full rounded-md bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-800 focus:outline-none focus:ring-2 focus:ring-emerald-300">Login</button>
+        </form>
+
+        <a href="./register.html" class="mt-4 block rounded-md border border-slate-400 px-4 py-2 text-center text-sm font-semibold text-slate-700 transition hover:bg-slate-200">
+          Create an account
+        </a>
+      </section>
+    </main>
+
+    <script src="./javascript/auth.js"></script>
+  </body>
+</html>
