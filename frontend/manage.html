@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DRRCA Manage Records</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="./styles/styles.css" />
+    <link rel="stylesheet" href="./styles/manage.css" />
+  </head>
+  <body class="bg-slate-50 text-slate-900">
+    <main id="appShell" class="mx-auto hidden min-h-screen max-w-7xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
+      <header class="app-header">
+        <div>
+          <p class="eyebrow">Disaster Risk Reduction and Climate Adaptation</p>
+          <h1 class="page-title">Manage Records</h1>
+        </div>
+        <div class="header-actions">
+          <span id="userBadge" class="user-badge"></span>
+          <a class="nav-link" href="./index.html">Dashboard</a>
+          <a class="nav-link active" href="./manage.html">Manage</a>
+          <a class="nav-link" href="./insights.html">Insights</a>
+          <a class="nav-link" href="./backup.html" data-admin-only>Backup</a>
+          <button id="darkModeBtn" class="btn btn-light text-lg" aria-label="Toggle dark mode">☾</button>
+          <button id="logoutBtn" class="btn btn-light">Logout</button>
+        </div>
+      </header>
+
+      <section class="manage-actions-grid">
+        <div class="panel">
+          <p class="muted">Contributor Tools</p>
+          <h2 class="section-title mt-1">Add And Track Your Records</h2>
+          <p class="muted mt-1">Add records to the shared graph and update the records created by your account.</p>
+          <button id="mySampleBtn" class="btn btn-primary mt-4">Add My Samples</button>
+        </div>
+
+        <div class="panel" data-admin-only>
+          <p class="muted">Admin Tools</p>
+          <h2 class="section-title mt-1">Seed Shared Scenario Data</h2>
+          <p class="muted mt-1">Admin sample sets are visible to every logged-in user.</p>
+          <div class="mt-4 flex flex-wrap gap-2">
+            <button id="sampleBtn" class="btn btn-primary">Add Samples</button>
+            <button id="sampleBtn2" class="btn btn-primary">Add Samples 2</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
+        <div class="panel">
+          <h2 class="section-title">Community Lookup</h2>
+          <p class="muted mt-1">Find a community and review its assigned center, resources, and hazard links.</p>
+          <form id="searchForm" class="mt-4 flex flex-col gap-3 sm:flex-row">
+            <input id="searchInput" type="search" list="communityOptions" class="field flex-1" placeholder="Choose or type a community name" />
+            <datalist id="communityOptions"></datalist>
+            <button class="btn btn-primary">Search</button>
+          </form>
+          <div id="searchResult" class="mt-4 rounded-md border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
+            No community selected.
+          </div>
+        </div>
+
+        <div class="panel">
+          <h2 class="section-title">My Added Records</h2>
+          <p class="muted mt-1">Records created by your account. Use these shortcuts to update your own contributions.</p>
+          <div id="myRecords" class="my-records-list mt-4"></div>
+        </div>
+      </section>
+
+      <section class="grid gap-6 lg:grid-cols-[380px_1fr]">
+        <form id="nodeForm" class="panel manage-form-panel">
+          <div class="mb-4 flex items-center justify-between">
+            <div>
+              <h2 id="formTitle" class="section-title">Create Node</h2>
+              <p class="muted mt-1">Choose a record type, fill in details, then link it to existing records.</p>
+            </div>
+            <button id="cancelEditBtn" type="button" class="btn btn-light hidden">Cancel</button>
+          </div>
+
+          <label class="block text-sm font-medium text-slate-700" for="nodeType">Node Type</label>
+          <select id="nodeType" class="field mt-1">
+            <option value="communities">Community</option>
+            <option value="hazardZones">Hazard Zone</option>
+            <option value="evacuationCenters">Evacuation Center</option>
+            <option value="resources">Resource</option>
+            <option value="incidentReports">Incident Report</option>
+            <option value="preparednessItems">Preparedness Item</option>
+          </select>
+
+          <div id="propertyFields" class="mt-4 space-y-3"></div>
+          <div id="relationshipFields" class="mt-4 space-y-3 border-t border-slate-200 pt-4"></div>
+
+          <button id="saveBtn" class="btn btn-primary mt-5 w-full">Save Node</button>
+        </form>
+
+        <section class="panel">
+          <div class="mb-4 space-y-3">
+            <div class="flex flex-col gap-2 xl:flex-row xl:items-end xl:justify-between">
+              <div>
+                <h2 class="section-title">Shared Graph Records</h2>
+                <p class="muted">Everyone can view shared records. Users edit their own records; admins manage all records.</p>
+              </div>
+              <button id="deleteSelectedBtn" class="btn btn-danger hidden">Delete Selected</button>
+            </div>
+
+            <div id="recordStats"></div>
+
+            <div class="grid gap-2 md:grid-cols-[1fr_180px_180px]">
+              <input id="recordSearch" type="search" class="field" placeholder="Filter by name, status, type, or relationship" />
+              <select id="ownerFilter" class="field">
+                <option value="all">All records</option>
+                <option value="mine">My records</option>
+                <option value="editable">Editable by me</option>
+              </select>
+              <select id="sortRecords" class="field">
+                <option value="name-asc">Name/Type A-Z</option>
+                <option value="name-desc">Name/Type Z-A</option>
+                <option value="population-desc">Population High-Low</option>
+                <option value="population-asc">Population Low-High</option>
+                <option value="capacity-desc">Capacity High-Low</option>
+                <option value="capacity-asc">Capacity Low-High</option>
+                <option value="quantity-desc">Quantity High-Low</option>
+                <option value="quantity-asc">Quantity Low-High</option>
+                <option value="risk-desc">Risk Critical-Low</option>
+                <option value="risk-asc">Risk Low-Critical</option>
+                <option value="status-asc">Status A-Z</option>
+                <option value="vulnerability-desc">Vulnerability Critical-Low</option>
+              </select>
+            </div>
+
+            <select id="listType" class="field">
+              <option value="communities">Communities</option>
+              <option value="hazardZones">Hazard Zones</option>
+              <option value="evacuationCenters">Evacuation Centers</option>
+              <option value="resources">Resources</option>
+              <option value="incidentReports">Incident Reports</option>
+              <option value="preparednessItems">Preparedness Items</option>
+            </select>
+          </div>
+
+          <div class="records-table-wrap rounded-md border border-slate-200">
+            <table class="min-w-full divide-y divide-slate-200 text-sm">
+              <thead class="bg-slate-100 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">
+                <tr>
+                  <th class="px-4 py-3"><input id="selectAllRecords" type="checkbox" class="h-4 w-4 rounded border-slate-300" /></th>
+                  <th class="px-4 py-3">Record</th>
+                  <th class="px-4 py-3">Details</th>
+                  <th class="px-4 py-3">Links</th>
+                  <th class="px-4 py-3 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="recordsTable" class="divide-y divide-slate-100 bg-white"></tbody>
+            </table>
+          </div>
+          <div id="recordsPager" class="mt-3"></div>
+        </section>
+      </section>
+    </main>
+
+    <script src="./javascript/common.js"></script>
+    <script src="./javascript/manage.js"></script>
+  </body>
+</html>

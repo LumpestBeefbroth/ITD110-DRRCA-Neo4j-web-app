@@ -3,136 +3,59 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>DRRCA Graph Manager</title>
+    <title>DRRCA Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="./styles/styles.css" />
+    <link rel="stylesheet" href="./styles/dashboard.css" />
   </head>
   <body class="bg-slate-50 text-slate-900">
     <main id="appShell" class="mx-auto hidden min-h-screen max-w-7xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
-      <header class="flex flex-col gap-4 border-b border-slate-200 pb-5 md:flex-row md:items-end md:justify-between">
+      <header class="app-header">
         <div>
-          <p class="text-sm font-semibold uppercase tracking-wide text-emerald-700">Disaster Risk Reduction and Climate Adaptation</p>
-          <h1 class="mt-1 text-3xl font-bold tracking-tight text-slate-950">Community Response Graph</h1>
+          <p class="eyebrow">Disaster Risk Reduction and Climate Adaptation</p>
+          <h1 class="page-title">Dashboard</h1>
         </div>
-        <div class="flex flex-wrap gap-2">
-          <span id="userBadge" class="inline-flex items-center rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700"></span>
-          <button id="logoutBtn" class="inline-flex items-center justify-center rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800 shadow-sm transition hover:bg-slate-100">
-            Logout
-          </button>
-          <button id="sampleBtn" class="inline-flex items-center justify-center rounded-md bg-emerald-700 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-800">
-            Add Samples
-          </button>
-          <button id="darkModeBtn" class="inline-flex items-center justify-center rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800 shadow-sm transition hover:bg-slate-100">
-            Dark Mode
-          </button>
-          <button id="backupBtn" class="inline-flex items-center justify-center rounded-md bg-slate-950 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800">
-            Download Backup
-          </button>
+        <div class="header-actions">
+          <span id="userBadge" class="user-badge"></span>
+          <a class="nav-link active" href="./index.html">Dashboard</a>
+          <a class="nav-link" href="./manage.html">Manage</a>
+          <a class="nav-link" href="./insights.html">Insights</a>
+          <a class="nav-link" href="./backup.html" data-admin-only>Backup</a>
+          <button id="darkModeBtn" class="btn btn-light text-lg" aria-label="Toggle dark mode">☾</button>
+          <button id="logoutBtn" class="btn btn-light">Logout</button>
         </div>
       </header>
 
-      <section class="grid gap-4 md:grid-cols-4" id="summaryCards"></section>
+      <section class="grid gap-4 md:grid-cols-3 xl:grid-cols-6" id="summaryCards"></section>
 
-      <section class="grid gap-6 lg:grid-cols-[1fr_1.15fr]">
-        <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+      <section class="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+        <div class="panel">
           <div class="mb-4 flex items-center justify-between gap-3">
-            <h2 class="text-lg font-semibold text-slate-950">Evacuation Capacity</h2>
-            <span id="healthBadge" class="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">Checking</span>
+            <h2 class="section-title">Evacuation Capacity</h2>
+            <span id="healthBadge" class="status-pill">Checking</span>
           </div>
-          <div class="h-72">
+          <div class="h-80">
             <canvas id="capacityChart"></canvas>
           </div>
         </div>
 
-        <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-          <h2 class="mb-4 text-lg font-semibold text-slate-950">Community Search</h2>
-          <form id="searchForm" class="flex flex-col gap-3 sm:flex-row">
-            <input id="searchInput" type="search" list="communityOptions" class="min-h-10 flex-1 rounded-md border border-slate-300 px-3 text-sm outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100" placeholder="Choose or type a community name" />
-            <datalist id="communityOptions"></datalist>
-            <button class="rounded-md bg-emerald-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-800">Search</button>
-          </form>
-          <div id="searchResult" class="mt-4 rounded-md border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
-            No community selected.
-          </div>
+        <div class="panel">
+          <h2 class="section-title">Emergency Priority Scores</h2>
+          <div id="priorityList" class="mt-4 space-y-2"></div>
         </div>
       </section>
 
-      <section class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-        <div class="mb-4 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <h2 class="text-lg font-semibold text-slate-950">Response Map</h2>
-            <p class="text-sm text-slate-500">Highest-priority communities with their linked hazard areas and evacuation centers.</p>
-          </div>
+      <section class="panel">
+        <div class="mb-4">
+          <h2 class="section-title">Response Map</h2>
+          <p class="muted">Highest-priority communities with linked hazard areas and evacuation centers.</p>
         </div>
-        <div id="graphMap" class="grid gap-3 md:grid-cols-2 xl:grid-cols-3"></div>
-      </section>
-
-      <section class="grid gap-6 lg:grid-cols-[380px_1fr]">
-        <form id="nodeForm" class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-          <div class="mb-4 flex items-center justify-between">
-            <h2 id="formTitle" class="text-lg font-semibold text-slate-950">Create Node</h2>
-            <button id="cancelEditBtn" type="button" class="hidden rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100">Cancel</button>
-          </div>
-
-          <label class="block text-sm font-medium text-slate-700" for="nodeType">Node Type</label>
-          <select id="nodeType" class="mt-1 min-h-10 w-full rounded-md border border-slate-300 px-3 text-sm outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100">
-            <option value="communities">Community</option>
-            <option value="hazardZones">Hazard Zone</option>
-            <option value="evacuationCenters">Evacuation Center</option>
-            <option value="resources">Resource</option>
-          </select>
-
-          <div id="propertyFields" class="mt-4 space-y-3"></div>
-          <div id="relationshipFields" class="mt-4 space-y-3 border-t border-slate-200 pt-4"></div>
-
-          <button id="saveBtn" class="mt-5 w-full rounded-md bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-800">Save Node</button>
-        </form>
-
-        <section class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-          <div class="mb-4 flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-            <h2 class="text-lg font-semibold text-slate-950">Graph Records</h2>
-            <div class="flex flex-col gap-2 sm:flex-row">
-              <button id="deleteSelectedBtn" class="hidden rounded-md bg-rose-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-rose-800">Delete Selected</button>
-              <select id="sortRecords" class="min-h-10 rounded-md border border-slate-300 px-3 text-sm outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100">
-                <option value="name-asc">Name/Type A-Z</option>
-                <option value="name-desc">Name/Type Z-A</option>
-                <option value="population-desc">Population High-Low</option>
-                <option value="population-asc">Population Low-High</option>
-                <option value="capacity-desc">Capacity High-Low</option>
-                <option value="capacity-asc">Capacity Low-High</option>
-                <option value="quantity-desc">Quantity High-Low</option>
-                <option value="quantity-asc">Quantity Low-High</option>
-                <option value="risk-desc">Risk Critical-Low</option>
-                <option value="risk-asc">Risk Low-Critical</option>
-                <option value="status-asc">Status A-Z</option>
-                <option value="vulnerability-desc">Vulnerability Critical-Low</option>
-              </select>
-              <select id="listType" class="min-h-10 rounded-md border border-slate-300 px-3 text-sm outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100">
-                <option value="communities">Communities</option>
-                <option value="hazardZones">Hazard Zones</option>
-                <option value="evacuationCenters">Evacuation Centers</option>
-                <option value="resources">Resources</option>
-              </select>
-            </div>
-          </div>
-          <div class="overflow-hidden rounded-md border border-slate-200">
-            <table class="min-w-full divide-y divide-slate-200 text-sm">
-              <thead class="bg-slate-100 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">
-                <tr>
-                  <th class="px-4 py-3"><input id="selectAllRecords" type="checkbox" class="h-4 w-4 rounded border-slate-300" /></th>
-                  <th class="px-4 py-3">Node</th>
-                  <th class="px-4 py-3">Details</th>
-                  <th class="px-4 py-3">Operational Links</th>
-                  <th class="px-4 py-3 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody id="recordsTable" class="divide-y divide-slate-100 bg-white"></tbody>
-            </table>
-          </div>
-        </section>
+        <div id="responseMap" class="grid gap-3 md:grid-cols-2 xl:grid-cols-3"></div>
       </section>
     </main>
 
-    <script src="./javascript/app.js"></script>
+    <script src="./javascript/common.js"></script>
+    <script src="./javascript/dashboard.js"></script>
   </body>
 </html>

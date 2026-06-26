@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DRRCA Backup</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="./styles/styles.css" />
+    <link rel="stylesheet" href="./styles/backup.css" />
+  </head>
+  <body class="bg-slate-50 text-slate-900">
+    <main id="appShell" class="mx-auto hidden min-h-screen max-w-5xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
+      <header class="app-header">
+        <div>
+          <p class="eyebrow">Disaster Risk Reduction and Climate Adaptation</p>
+          <h1 class="page-title">Backup & Audit</h1>
+        </div>
+        <div class="header-actions">
+          <span id="userBadge" class="user-badge"></span>
+          <a class="nav-link" href="./index.html">Dashboard</a>
+          <a class="nav-link" href="./manage.html">Manage</a>
+          <a class="nav-link" href="./insights.html">Insights</a>
+          <a class="nav-link active" href="./backup.html" data-admin-only>Backup</a>
+          <button id="darkModeBtn" class="btn btn-light text-lg" aria-label="Toggle dark mode">☾</button>
+          <button id="logoutBtn" class="btn btn-light">Logout</button>
+        </div>
+      </header>
+
+      <section class="grid gap-6 lg:grid-cols-2">
+        <div class="panel">
+          <h2 class="section-title">Download Backup</h2>
+          <p class="muted mt-1">Export your current graph data as a JSON file.</p>
+          <button id="backupBtn" class="btn btn-dark mt-4">Download Backup JSON</button>
+        </div>
+
+        <div class="panel">
+          <h2 class="section-title">Restore Backup</h2>
+          <p class="muted mt-1">Import a backup JSON into the current account.</p>
+          <div class="mt-4 flex flex-col gap-2">
+            <input id="restoreInput" type="file" accept="application/json,.json" class="field" />
+            <button id="restoreBtn" class="btn btn-primary">Restore Backup JSON</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2 class="section-title">Audit Logs</h2>
+        <div id="auditList" class="mt-4 space-y-2"></div>
+      </section>
+    </main>
+
+    <script src="./javascript/common.js"></script>
+    <script src="./javascript/backup.js"></script>
+  </body>
+</html>

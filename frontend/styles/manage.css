@@ -1,0 +1,76 @@
+.records-table-wrap {
+  overflow-x: auto;
+}
+
+.manage-actions-grid {
+  display: grid;
+  gap: 1rem;
+}
+
+body.admin-user .manage-actions-grid [data-admin-only] {
+  display: block;
+}
+
+@media (min-width: 768px) {
+  .manage-actions-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.manage-form-panel {
+  align-self: start;
+  position: sticky;
+  top: 1rem;
+}
+
+.my-records-list {
+  display: grid;
+  gap: 0.75rem;
+  max-height: 22rem;
+  overflow-y: auto;
+  padding-right: 0.25rem;
+}
+
+.my-record-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border: 1px solid rgb(226 232 240);
+  border-radius: 0.5rem;
+  background: rgb(248 250 252);
+  padding: 0.875rem;
+}
+
+.record-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.record-stats span {
+  border: 1px solid rgb(226 232 240);
+  border-radius: 999px;
+  background: rgb(248 250 252);
+  color: rgb(71 85 105);
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.35rem 0.65rem;
+}
+
+.records-table-wrap td {
+  vertical-align: top;
+}
+
+body.dark-mode .my-record-row,
+body.dark-mode .record-stats span {
+  border-color: rgb(51 65 85);
+  background: rgb(15 23 42);
+  color: rgb(203 213 225);
+}
+
+@media (max-width: 1023px) {
+  .manage-form-panel {
+    position: static;
+  }
+}

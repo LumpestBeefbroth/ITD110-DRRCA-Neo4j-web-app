@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DRRCA Insights</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="./styles/styles.css" />
+    <link rel="stylesheet" href="./styles/insights.css" />
+  </head>
+  <body class="bg-slate-50 text-slate-900">
+    <main id="appShell" class="mx-auto hidden min-h-screen max-w-7xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
+      <header class="app-header">
+        <div>
+          <p class="eyebrow">Disaster Risk Reduction and Climate Adaptation</p>
+          <h1 class="page-title">Insights</h1>
+        </div>
+        <div class="header-actions">
+          <span id="userBadge" class="user-badge"></span>
+          <a class="nav-link" href="./index.html">Dashboard</a>
+          <a class="nav-link" href="./manage.html">Manage</a>
+          <a class="nav-link active" href="./insights.html">Insights</a>
+          <a class="nav-link" href="./backup.html" data-admin-only>Backup</a>
+          <button id="darkModeBtn" class="btn btn-light text-lg" aria-label="Toggle dark mode">☾</button>
+          <button id="logoutBtn" class="btn btn-light">Logout</button>
+        </div>
+      </header>
+
+      <section id="insightSummary" class="insight-summary-grid"></section>
+
+      <section class="grid gap-6 xl:grid-cols-[1fr_360px]">
+        <div class="panel">
+          <div class="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <h2 class="section-title">Evacuation Readiness Board</h2>
+              <p class="muted mt-1">Centers grouped with assigned communities, remaining capacity, and stocked resources.</p>
+            </div>
+            <div class="grid gap-2 sm:grid-cols-[1fr_160px] lg:w-[420px]">
+              <input id="readinessSearch" type="search" class="field" placeholder="Search center or community" />
+              <select id="readinessFilter" class="field">
+                <option value="all">All status</option>
+                <option value="Needs Action">Needs Action</option>
+                <option value="Watch">Watch</option>
+                <option value="Ready">Ready</option>
+              </select>
+            </div>
+          </div>
+          <div id="readinessBoard" class="mt-4 grid gap-3"></div>
+        </div>
+        <div class="panel">
+          <h2 class="section-title">Capacity & Resource Alerts</h2>
+          <p class="muted mt-1">Items that need the fastest review.</p>
+          <div id="alertList" class="mt-4 space-y-2"></div>
+        </div>
+      </section>
+
+      <section class="grid gap-6 xl:grid-cols-[1fr_360px]">
+        <div class="panel">
+          <h2 class="section-title">Emergency Priority Scores</h2>
+          <p class="muted mt-1">Communities ranked by vulnerability, hazard risk, and resource readiness.</p>
+          <div id="priorityList" class="mt-4 grid gap-3 md:grid-cols-2"></div>
+        </div>
+
+        <div class="panel" data-admin-only>
+          <h2 class="section-title">Admin Operations Snapshot</h2>
+          <p class="muted mt-1">A quick check of records that usually need cleanup before backup or reporting.</p>
+          <div id="adminSnapshot" class="mt-4 grid gap-2"></div>
+        </div>
+      </section>
+    </main>
+
+    <script src="./javascript/common.js"></script>
+    <script src="./javascript/insights.js"></script>
+  </body>
+</html>
