@@ -12,6 +12,7 @@ const nodeDefinitions = {
   hazardZones: {
     label: 'Hazard Zone',
     fields: [
+      { name: 'name', label: 'Area Name', type: 'text', required: true },
       { name: 'type', label: 'Type', type: 'select', options: ['Flood', 'Landslide'], required: true },
       { name: 'riskLevel', label: 'Risk Level', type: 'select', options: ['Low', 'Moderate', 'High', 'Critical'], required: true }
     ]
@@ -77,6 +78,8 @@ const elements = {
   deleteSelectedBtn: document.getElementById('deleteSelectedBtn'),
   selectAllRecords: document.getElementById('selectAllRecords')
 };
+
+elements.graphMap = document.getElementById('graphMap');
 
 const darkModeStyle = document.createElement('style');
 darkModeStyle.textContent = `
@@ -394,6 +397,42 @@ function renderCapacityChart(data) {
   });
 }
 
+function renderGraphMap() {
+  if (!elements.graphMap) return;
+
+  const communities = state.nodes.communities.slice().sort((a, b) => {
+    return riskRank(b.properties?.vulnerabilityLevel) - riskRank(a.properties?.vulnerabilityLevel)
+      || nodeDisplayName(a).localeCompare(nodeDisplayName(b));
+  });
+
+  if (!communities.length) {
+    elements.graphMap.innerHTML = '<p class="text-sm text-slate-500">Add communities or samples to see the response map.</p>';
+    return;
+  }
+
+  elements.graphMap.innerHTML = communities.slice(0, 6).map((community) => {
+    const links = relationshipSummary(community);
+    const center = links.find((link) => link.startsWith('Assigned to')) || 'No evacuation center assigned';
+    const zone = links.find((link) => link.startsWith('Located in')) || 'No hazard zone linked';
+
+    return `
+      <article class="rounded-md border border-slate-200 bg-slate-50 p-3">
+        <div class="flex flex-wrap items-start justify-between gap-2">
+          <div>
+            <p class="font-semibold text-slate-950">${escapeHtml(nodeDisplayName(community))}</p>
+            <p class="mt-1 text-xs text-slate-500">${escapeHtml(formatNumber(community.properties.population || 0))} residents</p>
+          </div>
+          ${renderChip(community.properties.vulnerabilityLevel || 'N/A')}
+        </div>
+        <div class="mt-3 space-y-1 text-sm text-slate-700">
+          <p>${escapeHtml(zone)}</p>
+          <p>${escapeHtml(center)}</p>
+        </div>
+      </article>
+    `;
+  }).join('');
+}
+
 function relationshipSummary(node) {
   const outgoing = node.outgoing || [];
   const incoming = node.incoming || [];
@@ -434,7 +473,7 @@ function recordSubtitle(node) {
 
 function renderDetails(node) {
   const visibleEntries = Object.entries(node.properties)
-    .filter(([key]) => !['sampleId', 'sampleIndex'].includes(key))
+    .filter(([key]) => !['ownerId', 'sampleId', 'sampleIndex'].includes(key))
     .filter(([key]) => key !== 'name');
 
   if (!visibleEntries.length) {
@@ -613,6 +652,7 @@ async function refreshAll() {
   renderCommunityOptions();
   renderForm();
   renderRecords();
+  renderGraphMap();
   await refreshDashboard();
 }
 
@@ -795,8 +835,28 @@ elements.searchForm.addEventListener('submit', async (event) => {
   }
 });
 
-elements.backupBtn.addEventListener('click', () => {
-  window.location.href = `${API_BASE}/backup`;
+elements.backupBtn.addEventListener('click', async () => {
+  try {
+    const response = await fetch(`${API_BASE}/backup`, {
+      headers: state.token ? { Authorization: `Bearer ${state.token}` } : {}
+    });
+
+    if (!response.ok) {
+      throw new Error('Backup download failed');
+    }
+
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `drrca-graph-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  } catch (error) {
+    alert(error.message);
+  }
 });
 
 elements.sampleBtn.addEventListener('click', async () => {

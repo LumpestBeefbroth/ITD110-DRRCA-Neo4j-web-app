@@ -16,6 +16,7 @@ const NODE_TYPES = {
   hazardZones: {
     label: 'HazardZone',
     fields: {
+      name: 'string',
       type: 'string',
       riskLevel: 'string'
     }
@@ -150,6 +151,8 @@ function idsFrom(value) {
 }
 
 async function applyRelationships(tx, type, nodeId, relationships = {}, replaceExisting = true) {
+  const userId = relationships.userId;
+
   if (type === 'communities') {
     if (replaceExisting && Object.prototype.hasOwnProperty.call(relationships, 'hazardZoneId')) {
       await tx.run(
@@ -160,11 +163,12 @@ async function applyRelationships(tx, type, nodeId, relationships = {}, replaceE
     if (relationships.hazardZoneId) {
       await tx.run(
         `
-        MATCH (c:Community), (z:HazardZone)
+        MATCH (:AppUser {id: $userId})-[:OWNS]->(c:Community)
+        MATCH (:AppUser {id: $userId})-[:OWNS]->(z:HazardZone)
         WHERE elementId(c) = $nodeId AND elementId(z) = $hazardZoneId
         MERGE (c)-[:LOCATED_IN]->(z)
         `,
-        { nodeId, hazardZoneId: String(relationships.hazardZoneId) }
+        { nodeId, hazardZoneId: String(relationships.hazardZoneId), userId }
       );
     }
 
@@ -177,11 +181,12 @@ async function applyRelationships(tx, type, nodeId, relationships = {}, replaceE
     if (relationships.evacuationCenterId) {
       await tx.run(
         `
-        MATCH (c:Community), (e:EvacuationCenter)
+        MATCH (:AppUser {id: $userId})-[:OWNS]->(c:Community)
+        MATCH (:AppUser {id: $userId})-[:OWNS]->(e:EvacuationCenter)
         WHERE elementId(c) = $nodeId AND elementId(e) = $evacuationCenterId
         MERGE (c)-[:ASSIGNED_TO]->(e)
         `,
-        { nodeId, evacuationCenterId: String(relationships.evacuationCenterId) }
+        { nodeId, evacuationCenterId: String(relationships.evacuationCenterId), userId }
       );
     }
   }
@@ -200,22 +205,22 @@ async function applyRelationships(tx, type, nodeId, relationships = {}, replaceE
     if (communityIds.length) {
       await tx.run(
         `
-        MATCH (z:HazardZone) WHERE elementId(z) = $nodeId
-        MATCH (c:Community) WHERE elementId(c) IN $communityIds
+        MATCH (:AppUser {id: $userId})-[:OWNS]->(z:HazardZone) WHERE elementId(z) = $nodeId
+        MATCH (:AppUser {id: $userId})-[:OWNS]->(c:Community) WHERE elementId(c) IN $communityIds
         MERGE (z)-[:THREATENS]->(c)
         `,
-        { nodeId, communityIds }
+        { nodeId, communityIds, userId }
       );
     }
 
     if (centerIds.length) {
       await tx.run(
         `
-        MATCH (z:HazardZone) WHERE elementId(z) = $nodeId
-        MATCH (e:EvacuationCenter) WHERE elementId(e) IN $centerIds
+        MATCH (:AppUser {id: $userId})-[:OWNS]->(z:HazardZone) WHERE elementId(z) = $nodeId
+        MATCH (:AppUser {id: $userId})-[:OWNS]->(e:EvacuationCenter) WHERE elementId(e) IN $centerIds
         MERGE (z)-[:THREATENS]->(e)
         `,
-        { nodeId, centerIds }
+        { nodeId, centerIds, userId }
       );
     }
   }
@@ -232,11 +237,11 @@ async function applyRelationships(tx, type, nodeId, relationships = {}, replaceE
     if (resourceIds.length) {
       await tx.run(
         `
-        MATCH (e:EvacuationCenter) WHERE elementId(e) = $nodeId
-        MATCH (r:Resource) WHERE elementId(r) IN $resourceIds
+        MATCH (:AppUser {id: $userId})-[:OWNS]->(e:EvacuationCenter) WHERE elementId(e) = $nodeId
+        MATCH (:AppUser {id: $userId})-[:OWNS]->(r:Resource) WHERE elementId(r) IN $resourceIds
         MERGE (e)-[:HAS_STOCK]->(r)
         `,
-        { nodeId, resourceIds }
+        { nodeId, resourceIds, userId }
       );
     }
   }
@@ -252,13 +257,46 @@ async function applyRelationships(tx, type, nodeId, relationships = {}, replaceE
     if (relationships.evacuationCenterId) {
       await tx.run(
         `
-        MATCH (e:EvacuationCenter), (r:Resource)
+        MATCH (:AppUser {id: $userId})-[:OWNS]->(e:EvacuationCenter)
+        MATCH (:AppUser {id: $userId})-[:OWNS]->(r:Resource)
         WHERE elementId(e) = $evacuationCenterId AND elementId(r) = $nodeId
         MERGE (e)-[:HAS_STOCK]->(r)
         `,
-        { nodeId, evacuationCenterId: String(relationships.evacuationCenterId) }
+        { nodeId, evacuationCenterId: String(relationships.evacuationCenterId), userId }
       );
     }
+  }
+}
+
+async function requireAuth(req, res, next) {
+  const session = getSession(neo4j.session.READ);
+
+  try {
+    const token = String(req.headers.authorization || '').replace(/^Bearer\s+/i, '').trim();
+    if (!token) {
+      return res.status(401).json({ error: 'Please log in first' });
+    }
+
+    const result = await session.run(
+      `
+      MATCH (u:AppUser)-[:HAS_SESSION]->(s:AppSession {token: $token})
+      WHERE datetime(s.expiresAt) > datetime()
+      RETURN u
+      LIMIT 1
+      `,
+      { token }
+    );
+
+    if (!result.records.length) {
+      return res.status(401).json({ error: 'Session expired. Please log in again.' });
+    }
+
+    req.user = userToJson(result.records[0].get('u'));
+    next();
+  } catch (error) {
+    next(error);
+  } finally {
+    await session.close();
   }
 }
 
@@ -448,6 +486,8 @@ router.get('/health', async (_req, res, next) => {
   }
 });
 
+router.use(requireAuth);
+
 router.get('/nodes/:type', async (req, res, next) => {
   const session = getSession(neo4j.session.READ);
 
@@ -455,7 +495,7 @@ router.get('/nodes/:type', async (req, res, next) => {
     const { label } = getNodeConfig(req.params.type);
     const result = await session.run(
       `
-      MATCH (n:${label})
+      MATCH (:AppUser {id: $userId})-[:OWNS]->(n:${label})
       OPTIONAL MATCH (n)-[out]->(target)
       OPTIONAL MATCH (source)-[inRel]->(n)
       RETURN n,
@@ -474,7 +514,8 @@ router.get('/nodes/:type', async (req, res, next) => {
                sourceName: coalesce(source.name, source.type, labels(source)[0])
              }) AS incoming
       ORDER BY coalesce(n.name, n.type)
-      `
+      `,
+      { userId: req.user.id }
     );
 
     res.json(result.records.map((record) => ({
@@ -500,14 +541,19 @@ router.post('/nodes/:type', async (req, res, next) => {
 
     const createdNode = await session.executeWrite(async (tx) => {
       const result = await tx.run(
-        `CREATE (n:${label}) SET n = $properties RETURN n`,
-        { properties }
+        `
+        MATCH (u:AppUser {id: $userId})
+        CREATE (u)-[:OWNS]->(n:${label})
+        SET n = $properties
+        RETURN n
+        `,
+        { properties, userId: req.user.id }
       );
       const node = result.records[0].get('n');
-      await applyRelationships(tx, type, node.elementId, relationships, true);
+      await applyRelationships(tx, type, node.elementId, { ...relationships, userId: req.user.id }, true);
       const refreshed = await tx.run(
-        `MATCH (n:${label}) WHERE elementId(n) = $nodeId RETURN n`,
-        { nodeId: node.elementId }
+        `MATCH (:AppUser {id: $userId})-[:OWNS]->(n:${label}) WHERE elementId(n) = $nodeId RETURN n`,
+        { nodeId: node.elementId, userId: req.user.id }
       );
       return refreshed.records[0].get('n');
     });
@@ -532,12 +578,12 @@ router.patch('/nodes/:type/:id', async (req, res, next) => {
     const updatedNode = await session.executeWrite(async (tx) => {
       const result = await tx.run(
         `
-        MATCH (n:${label})
+        MATCH (:AppUser {id: $userId})-[:OWNS]->(n:${label})
         WHERE elementId(n) = $id
         SET n += $properties
         RETURN n
         `,
-        { id: req.params.id, properties }
+        { id: req.params.id, properties, userId: req.user.id }
       );
 
       if (!result.records.length) {
@@ -546,10 +592,10 @@ router.patch('/nodes/:type/:id', async (req, res, next) => {
         throw error;
       }
 
-      await applyRelationships(tx, type, req.params.id, relationships, true);
+      await applyRelationships(tx, type, req.params.id, { ...relationships, userId: req.user.id }, true);
       const refreshed = await tx.run(
-        `MATCH (n:${label}) WHERE elementId(n) = $id RETURN n`,
-        { id: req.params.id }
+        `MATCH (:AppUser {id: $userId})-[:OWNS]->(n:${label}) WHERE elementId(n) = $id RETURN n`,
+        { id: req.params.id, userId: req.user.id }
       );
       return refreshed.records[0].get('n');
     });
@@ -571,13 +617,13 @@ router.delete('/nodes/:type/:id', async (req, res, next) => {
     const deletedCount = await session.executeWrite(async (tx) => {
       const result = await tx.run(
         `
-        MATCH (n:${label})
+        MATCH (:AppUser {id: $userId})-[:OWNS]->(n:${label})
         WHERE elementId(n) = $id
         WITH n, count(n) AS deleted
         DETACH DELETE n
         RETURN deleted
         `,
-        { id: req.params.id }
+        { id: req.params.id, userId: req.user.id }
       );
       return result.records[0].get('deleted').toNumber();
     });
@@ -605,7 +651,7 @@ router.get('/search/community', async (req, res, next) => {
 
     const result = await session.run(
       `
-      MATCH (c:Community)
+      MATCH (:AppUser {id: $userId})-[:OWNS]->(c:Community)
       WHERE toLower(c.name) = toLower($name)
          OR toLower(c.name) CONTAINS toLower($name)
       OPTIONAL MATCH (c)-[:ASSIGNED_TO]->(center:EvacuationCenter)
@@ -620,7 +666,7 @@ router.get('/search/community', async (req, res, next) => {
       ORDER BY c.name
       LIMIT 1
       `,
-      { name }
+      { name, userId: req.user.id }
     );
 
     if (!result.records.length) {
@@ -642,19 +688,20 @@ router.get('/search/community', async (req, res, next) => {
   }
 });
 
-router.get('/dashboard', async (_req, res, next) => {
+router.get('/dashboard', async (req, res, next) => {
   const session = getSession(neo4j.session.READ);
 
   try {
     const countsResult = await session.run(
       `
-      MATCH (n)
+      MATCH (:AppUser {id: $userId})-[:OWNS]->(n)
       WHERE any(label IN labels(n) WHERE label IN ['Community', 'HazardZone', 'EvacuationCenter', 'Resource'])
       UNWIND labels(n) AS label
       WITH label, count(*) AS count
       WHERE label IN ['Community', 'HazardZone', 'EvacuationCenter', 'Resource']
       RETURN label, count
-      `
+      `,
+      { userId: req.user.id }
     );
 
     const counts = {
@@ -670,8 +717,11 @@ router.get('/dashboard', async (_req, res, next) => {
 
     const capacityResult = await session.run(
       `
-      MATCH (center:EvacuationCenter)
+      MATCH (:AppUser {id: $userId})-[:OWNS]->(center:EvacuationCenter)
       OPTIONAL MATCH (community:Community)-[:ASSIGNED_TO]->(center)
+      WHERE community IS NULL OR EXISTS {
+        MATCH (:AppUser {id: $userId})-[:OWNS]->(community)
+      }
       WITH center, coalesce(sum(community.population), 0) AS assignedPopulation
       RETURN center.name AS name,
              center.capacity AS capacity,
@@ -681,7 +731,8 @@ router.get('/dashboard', async (_req, res, next) => {
                ELSE center.capacity - assignedPopulation
              END AS remainingCapacity
       ORDER BY name
-      `
+      `,
+      { userId: req.user.id }
     );
 
     const evacuationCapacity = capacityResult.records.map((record) => ({
@@ -699,27 +750,30 @@ router.get('/dashboard', async (_req, res, next) => {
   }
 });
 
-router.get('/backup', async (_req, res, next) => {
+router.get('/backup', async (req, res, next) => {
   const session = getSession(neo4j.session.READ);
 
   try {
     const nodesResult = await session.run(
       `
-      MATCH (n)
+      MATCH (:AppUser {id: $userId})-[:OWNS]->(n)
       WHERE any(label IN labels(n) WHERE label IN ['Community', 'HazardZone', 'EvacuationCenter', 'Resource'])
       RETURN n
       ORDER BY labels(n)[0], coalesce(n.name, n.type)
-      `
+      `,
+      { userId: req.user.id }
     );
 
     const relationshipsResult = await session.run(
       `
-      MATCH (a)-[r]->(b)
+      MATCH (:AppUser {id: $userId})-[:OWNS]->(a)-[r]->(b)
+      MATCH (:AppUser {id: $userId})-[:OWNS]->(b)
       WHERE any(label IN labels(a) WHERE label IN ['Community', 'HazardZone', 'EvacuationCenter', 'Resource'])
         AND any(label IN labels(b) WHERE label IN ['Community', 'HazardZone', 'EvacuationCenter', 'Resource'])
       RETURN r
       ORDER BY type(r)
-      `
+      `,
+      { userId: req.user.id }
     );
 
     const backup = {
@@ -741,7 +795,7 @@ router.get('/backup', async (_req, res, next) => {
   }
 });
 
-router.post('/seed-samples', async (_req, res, next) => {
+router.post('/seed-samples', async (req, res, next) => {
   const session = getSession();
 
   const hazardZones = [
@@ -800,57 +854,65 @@ router.post('/seed-samples', async (_req, res, next) => {
     await session.executeWrite(async (tx) => {
       await tx.run(
         `
+        MATCH (u:AppUser {id: $userId})
         UNWIND $hazardZones AS row
-        MERGE (z:HazardZone {sampleId: row.sampleId})
+        MERGE (z:HazardZone {ownerId: $userId, sampleId: row.sampleId})
         SET z.name = row.name,
             z.type = row.type,
             z.riskLevel = row.riskLevel,
             z.sampleIndex = row.index
+        MERGE (u)-[:OWNS]->(z)
         `,
-        { hazardZones }
+        { hazardZones, userId: req.user.id }
       );
 
       await tx.run(
         `
+        MATCH (u:AppUser {id: $userId})
         UNWIND $evacuationCenters AS row
-        MERGE (e:EvacuationCenter {sampleId: row.sampleId})
+        MERGE (e:EvacuationCenter {ownerId: $userId, sampleId: row.sampleId})
         SET e.name = row.name,
             e.capacity = row.capacity,
             e.status = row.status,
             e.sampleIndex = row.index
+        MERGE (u)-[:OWNS]->(e)
         `,
-        { evacuationCenters }
+        { evacuationCenters, userId: req.user.id }
       );
 
       await tx.run(
         `
+        MATCH (u:AppUser {id: $userId})
         UNWIND $resources AS row
-        MERGE (r:Resource {sampleId: row.sampleId})
+        MERGE (r:Resource {ownerId: $userId, sampleId: row.sampleId})
         SET r.type = row.type,
             r.quantity = row.quantity
+        MERGE (u)-[:OWNS]->(r)
         WITH row, r
-        MATCH (e:EvacuationCenter {sampleId: row.centerId})
+        MATCH (e:EvacuationCenter {ownerId: $userId, sampleId: row.centerId})
         MERGE (e)-[:HAS_STOCK]->(r)
         `,
-        { resources }
+        { resources, userId: req.user.id }
       );
 
       await tx.run(
         `
+        MATCH (u:AppUser {id: $userId})
         UNWIND $communities AS row
-        MERGE (c:Community {sampleId: row.sampleId})
+        MERGE (c:Community {ownerId: $userId, sampleId: row.sampleId})
         SET c.name = row.name,
             c.population = row.population,
             c.vulnerabilityLevel = row.vulnerabilityLevel
+        MERGE (u)-[:OWNS]->(c)
         WITH row, c
-        MATCH (z:HazardZone {sampleId: row.zoneId})
-        MATCH (e:EvacuationCenter {sampleId: row.centerId})
+        MATCH (z:HazardZone {ownerId: $userId, sampleId: row.zoneId})
+        MATCH (e:EvacuationCenter {ownerId: $userId, sampleId: row.centerId})
         MERGE (c)-[:LOCATED_IN]->(z)
         MERGE (c)-[:ASSIGNED_TO]->(e)
         MERGE (z)-[:THREATENS]->(c)
         MERGE (z)-[:THREATENS]->(e)
         `,
-        { communities }
+        { communities, userId: req.user.id }
       );
     });
 
